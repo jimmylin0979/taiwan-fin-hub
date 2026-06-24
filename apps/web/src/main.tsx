@@ -3275,8 +3275,9 @@ function ExchangeRatesPanel({ api }: { api: ApiClient }) {
 
   const save = useMutation({
     mutationFn: async () => {
+      const merged = { ...Object.fromEntries(Object.entries(existingMap).map(([k, v]) => [k, String(v)])), ...rates };
       const parsed = Object.fromEntries(
-        Object.entries(rates).map(([k, v]) => [k, parseFloat(v)]).filter(([, v]) => !isNaN(v as number) && (v as number) > 0)
+        Object.entries(merged).map(([k, v]) => [k, parseFloat(v)]).filter(([, v]) => !isNaN(v as number) && (v as number) > 0)
       );
       await api.put("/api/exchange-rates", { rates: parsed });
     },
