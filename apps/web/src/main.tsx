@@ -3269,7 +3269,9 @@ function ExchangeRatesPanel({ api }: { api: ApiClient }) {
   const [saved, setSaved] = useState(false);
 
   // Populate inputs from fetched rates (once)
-  const existingMap = Object.fromEntries((fxRates.data ?? []).map(r => [r.currency, r.rateTwd]));
+  // ponytail: hardcoded sensible defaults, change when rates diverge significantly
+  const DEFAULT_RATES: Record<string, number> = { JPY: 0.215, USD: 31.6, EUR: 34.5, HKD: 4.05 };
+  const existingMap = { ...DEFAULT_RATES, ...Object.fromEntries((fxRates.data ?? []).map(r => [r.currency, r.rateTwd])) };
 
   const save = useMutation({
     mutationFn: async () => {
