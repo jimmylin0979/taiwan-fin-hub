@@ -17,7 +17,7 @@
 
 ## 部署
 
-**需要：** Cloudflare 帳號、GitHub 帳號
+**需要：** [Cloudflare 帳號](https://dash.cloudflare.com/signup)、[GitHub 帳號](https://github.com/signup)
 
 ### 步驟一：啟用 Cloudflare Access
 
