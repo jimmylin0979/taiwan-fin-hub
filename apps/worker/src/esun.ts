@@ -286,16 +286,13 @@ async function scrapeCreditCards(client: EsunHttpClient, lookbackMonths: number)
   ]);
   const asOfAt = new Date().toISOString();
 
-  const cards = getCreditCards(detail);
-  const bankTransactions = await scrapeTransactions(client);
-  const accountIds = new Set<string>([
-    ...cards.map((card) => creditCardSourceId(card.cardNo)),
-    ...bankTransactions.map((transaction) => transaction.accountId)
-  ]);
-  accountIds.delete("");
-
   const mainSourceId = "credit:esun:main";
-  accountIds.add(mainSourceId);
+  const bankTransactions = await scrapeTransactions(client);
+
+  // All transactions go to the shared main account (E.SUN pools credit limit across cards)
+  for (const txn of bankTransactions) {
+    txn.accountId = mainSourceId;
+  }
 
   const creditLimit = overview.trsam ?? undefined;
   const availableCredit = overview.trsam != null && overview.useam != null
@@ -308,26 +305,22 @@ async function scrapeCreditCards(client: EsunHttpClient, lookbackMonths: number)
 
   console.log(`[esun debug] creditLimit=${creditLimit} availableCredit=${availableCredit} statementBalance=${statementBalance} paymentDueDate=${paymentDueDate}`);
 
-  const cardBySourceId = new Map(cards.map((card) => [creditCardSourceId(card.cardNo), card]));
-  const bankAccounts: Scraped["bankAccounts"] = Array.from(accountIds).map((sourceId) => {
-    const card = cardBySourceId.get(sourceId);
-    return {
-      sourceId,
-      institutionName: "玉山銀行",
-      accountName: card?.cardNoDesc || (sourceId === mainSourceId ? "玉山信用卡" : `玉山信用卡 ${sourceId.slice(-4)}`),
-      accountType: "credit",
-      currency: "TWD",
-      creditLimit,
-      raw: card ?? detail
-    };
-  });
+  const bankAccounts: Scraped["bankAccounts"] = [{
+    sourceId: mainSourceId,
+    institutionName: "玉山銀行",
+    accountName: "玉山信用卡",
+    accountType: "credit",
+    currency: "TWD",
+    creditLimit,
+    raw: detail
+  }];
 
-  // Current balance snapshot
+  // Always create snapshot — even if balance is 0, we still want available credit/limit
   const outstanding = readOutstandingBalance(detail);
-  const bankBalanceSnapshots: Scraped["bankBalanceSnapshots"] = outstanding === undefined ? [] : [{
+  const bankBalanceSnapshots: Scraped["bankBalanceSnapshots"] = [{
     accountId: mainSourceId,
     sourceId: `${mainSourceId}:${asOfAt}`,
-    balance: -(outstanding),
+    balance: -(outstanding ?? 0),
     availableBalance: availableCredit,
     statementBalance,
     paymentDueDate,

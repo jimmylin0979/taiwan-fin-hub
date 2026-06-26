@@ -451,7 +451,8 @@ async function scrapeCreditCards(page: Page): Promise<Scraped> {
 
   console.log(`[cathaybk] card overview: ${JSON.stringify(cardOverview)}`);
 
-  const sourceId = cardOverview.last4 ? `credit:cathaybk:${cardOverview.last4}` : "credit:cathaybk:main";
+  // ponytail: always use main — CathayBK pools limit across all cards
+  const sourceId = "credit:cathaybk:main";
 
   bankAccounts.push({
     sourceId,
