@@ -3314,7 +3314,8 @@ const connectorFields: Record<ConnectorId, ConnectorField[]> = {
   cathaybk: [
     { key: "userId", label: "身分證字號", type: "text", placeholder: "A123456789" },
     { key: "account", label: "用戶代號", type: "text" },
-    { key: "password", label: "網銀密碼", type: "password" }
+    { key: "password", label: "網銀密碼", type: "password" },
+    { key: "lookbackDays", label: "查詢期間（天）", type: "number", placeholder: "30（最多 365）" }
   ]
 };
 
