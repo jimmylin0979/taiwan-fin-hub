@@ -2395,46 +2395,59 @@ function Cards({ api }: { api: ApiClient }) {
                   </div>
                 </div>
                 <div className="divide-y divide-ink/8">
-                  {group.cards.map((card) => {
-                    const cardBills = [...(billsByAccountId[card.id] ?? [])].sort((a, b) => b.billingPeriod.localeCompare(a.billingPeriod));
-                    return (
-                      <div key={card.id}>
-                        <div className="px-4 py-3">
-                          <p className="truncate text-sm font-medium">{card.accountName ?? card.sourceId}</p>
-                          <p className="text-xs text-ink/45">信用卡{card.accountLast4 ? ` · 末四 ${card.accountLast4}` : ""}</p>
-                        </div>
-                        {cardBills.length > 0 && (
-                          <div className="border-t border-ink/5 bg-paper">
-                            <p className="px-4 pt-3 text-xs font-medium text-ink/45">帳單紀錄</p>
-                            <Table
-                              bare
-                              columns={["帳單月份", "帳單金額", "最低應繳", "已繳金額", "是否已繳", "繳款截止日", "帳單截止日"]}
-                              rows={cardBills.map((bill) => {
-                                const dueSoon = !bill.isPaid && bill.paymentDueDate && bill.paymentDueDate <= in7days;
-                                return [
-                                  bill.billingPeriod,
-                                  bill.statementAmount != null ? formatCurrency(bill.statementAmount, bill.currency) : "-",
-                                  bill.minimumPayment != null ? formatCurrency(bill.minimumPayment, bill.currency) : "-",
-                                  bill.paidAmount != null ? formatCurrency(bill.paidAmount, bill.currency) : "-",
-                                  bill.isPaid ? (
-                                    <span className="inline-flex items-center rounded-full bg-moss/10 px-2 py-0.5 text-xs font-medium text-moss">已繳</span>
-                                  ) : bill.statementAmount ? (
-                                    <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600">未繳</span>
-                                  ) : "-",
-                                  bill.paymentDueDate
-                                    ? <span className={dueSoon ? "font-medium text-red-600" : ""}>{bill.paymentDueDate}</span>
-                                    : "-",
-                                  bill.statementClosingDate ?? "-"
-                                ];
-                              })}
-                              empty="尚無帳單紀錄。"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {group.cards.map((card) => (
+                    <div key={card.id} className="px-4 py-3">
+                      <p className="truncate text-sm font-medium">{card.accountName ?? card.sourceId}</p>
+                      <p className="text-xs text-ink/45">信用卡{card.accountLast4 ? ` · 末四 ${card.accountLast4}` : ""}</p>
+                    </div>
+                  ))}
                 </div>
+                {(() => {
+                  const allBills = group.cards.flatMap((c) => billsByAccountId[c.id] ?? []);
+                  if (allBills.length === 0) return null;
+                  const merged = Object.values(
+                    allBills.reduce<Record<string, { billingPeriod: string; statementAmount: number | null; minimumPayment: number | null; paidAmount: number | null; isPaid: boolean; paymentDueDate?: string; statementClosingDate?: string; currency: string }>>((acc, bill) => {
+                      const key = bill.billingPeriod;
+                      if (!acc[key]) {
+                        acc[key] = { billingPeriod: key, statementAmount: null, minimumPayment: null, paidAmount: null, isPaid: true, paymentDueDate: bill.paymentDueDate, statementClosingDate: bill.statementClosingDate, currency: bill.currency };
+                      }
+                      const e = acc[key]!;
+                      if (bill.statementAmount != null) e.statementAmount = (e.statementAmount ?? 0) + bill.statementAmount;
+                      if (bill.minimumPayment != null) e.minimumPayment = (e.minimumPayment ?? 0) + bill.minimumPayment;
+                      if (bill.paidAmount != null) e.paidAmount = (e.paidAmount ?? 0) + bill.paidAmount;
+                      if (!bill.isPaid) e.isPaid = false;
+                      return acc;
+                    }, {})
+                  ).sort((a, b) => b.billingPeriod.localeCompare(a.billingPeriod));
+                  return (
+                    <div className="border-t border-ink/5 bg-paper">
+                      <p className="px-4 pt-3 text-xs font-medium text-ink/45">帳單紀錄</p>
+                      <Table
+                        bare
+                        columns={["帳單月份", "帳單金額", "最低應繳", "已繳金額", "是否已繳", "繳款截止日", "帳單截止日"]}
+                        rows={merged.map((bill) => {
+                          const dueSoon = !bill.isPaid && bill.paymentDueDate && bill.paymentDueDate <= in7days;
+                          return [
+                            bill.billingPeriod,
+                            bill.statementAmount != null ? formatCurrency(bill.statementAmount, bill.currency) : "-",
+                            bill.minimumPayment != null ? formatCurrency(bill.minimumPayment, bill.currency) : "-",
+                            bill.paidAmount != null ? formatCurrency(bill.paidAmount, bill.currency) : "-",
+                            bill.isPaid ? (
+                              <span className="inline-flex items-center rounded-full bg-moss/10 px-2 py-0.5 text-xs font-medium text-moss">已繳</span>
+                            ) : bill.statementAmount ? (
+                              <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600">未繳</span>
+                            ) : "-",
+                            bill.paymentDueDate
+                              ? <span className={dueSoon ? "font-medium text-red-600" : ""}>{bill.paymentDueDate}</span>
+                              : "-",
+                            bill.statementClosingDate ?? "-"
+                          ];
+                        })}
+                        empty="尚無帳單紀錄。"
+                      />
+                    </div>
+                  );
+                })()}
               </article>
             ))}
           </div>
