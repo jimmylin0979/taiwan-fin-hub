@@ -8,6 +8,7 @@ const CREDIT_CARD_TIMELINE_URL = "https://ebank.esunbank.com.tw/fcm01/fcm01003/h
 const CREDIT_CARD_OVERVIEW_URL = "https://ebank.esunbank.com.tw/fcm01/fcm01010/home/initData.json";
 const CREDIT_CARD_BILLS_URL = "https://ebank.esunbank.com.tw/fcm01/fcm01003/bill/bills.json";
 const ACCOUNT_OVERVIEW_URL = "https://ebank.esunbank.com.tw/fms01/fms01029/home/initData.json";
+const ACCOUNT_TX_INIT_URL = "https://ebank.esunbank.com.tw/fao01/fao01013/home/initData.json";
 const ACCOUNT_TX_URL = "https://ebank.esunbank.com.tw/fao01/fao01002/search/findTxDetails.json";
 
 export function createEsunConnector(browser?: Fetcher) {
@@ -37,9 +38,9 @@ export function createEsunConnector(browser?: Fetcher) {
       const depositWatermarks = (cursorState.depositWatermarks as Record<string, string> | undefined) ?? {};
 
       console.log("[esun debug] scraping credit cards");
-      const creditCards = await scrapeCreditCards(client, config.lookbackMonths ?? 1);
+      const creditCards = await scrapeCreditCards(client, config.lookbackMonths ?? 3);
       console.log("[esun debug] scraping deposit accounts");
-      const deposits = await scrapeDepositAccounts(client, depositWatermarks, config.lookbackMonths ?? 1);
+      const deposits = await scrapeDepositAccounts(client, depositWatermarks, config.lookbackMonths ?? 3);
       const freshCookies = client.exportCookies();
       const expiresAt = new Date(Date.now() + 25 * 60 * 1000).toISOString();
 
@@ -533,6 +534,8 @@ async function scrapeDepositAccounts(
   const cutoffDate = new Date();
   cutoffDate.setMonth(cutoffDate.getMonth() - lookbackMonths);
   const cutoffDateStr = cutoffDate.toISOString().slice(0, 10).replace(/-/g, "/");
+  // Required: initialize server-side session state before findTxDetails calls
+  await client.postJson(ACCOUNT_TX_INIT_URL, {});
   const overview = await client.postJson<EsunAccountOverviewData>(ACCOUNT_OVERVIEW_URL, {});
   console.log(`[esun debug] overview: twDetails=${overview.twDetails?.length ?? 0} frDetails=${overview.frDetails?.length ?? 0}`);
   const asOfAt = new Date().toISOString();
