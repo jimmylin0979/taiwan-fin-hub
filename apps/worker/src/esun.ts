@@ -35,7 +35,7 @@ export function createEsunConnector(browser?: Fetcher) {
       }
 
       const cursorState = readCursor(cursor);
-      const depositWatermarks = (cursorState.depositWatermarks as Record<string, string> | undefined) ?? {};
+      const depositWatermarks: Record<string, string> = {};
 
       console.log("[esun debug] scraping credit cards");
       const creditCards = await scrapeCreditCards(client, config.lookbackMonths ?? 3);
@@ -54,7 +54,7 @@ export function createEsunConnector(browser?: Fetcher) {
           ...cursorState,
           sessionCookies: freshCookies,
           sessionExpiresAt: expiresAt,
-          depositWatermarks: deposits.watermarks,
+          depositWatermarks: undefined,
           syncedAt: new Date().toISOString()
         })
       };
@@ -572,7 +572,7 @@ async function scrapeDepositAccounts(
     const rows = await fetchAccountTransactionPages(client, account, row.accountType ?? "401", false, watermarks[account], cutoffDateStr);
     console.log(`[esun debug] tw account ${account}: fetched ${rows.length} transaction rows`);
     appendDepositTransactions(bankTransactions, rows, accountId, currency);
-    newWatermarks[account] = rows[0] ? txDateTimeKey(rows[0]) : watermarks[account];
+    newWatermarks[account] = watermarks[account];
   }
 
   for (const row of (overview.frDetails ?? []).filter((account) => account.account)) {
@@ -609,7 +609,7 @@ async function scrapeDepositAccounts(
       const currency = detail.displayCurrency?.trim() || primaryCurrency;
       appendDepositTransactions(bankTransactions, [detail], depositSourceId(account, currency), currency);
     }
-    newWatermarks[account] = rows[0] ? txDateTimeKey(rows[0]) : watermarks[account];
+    newWatermarks[account] = watermarks[account];
   }
 
   return { bankAccounts, bankBalanceSnapshots, bankTransactions, creditCardBills: [], watermarks: newWatermarks };
